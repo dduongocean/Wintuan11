@@ -9,8 +9,8 @@
 ### 1. Phân công nhiệm vụ nhóm (WBS - 2 Thành viên)
 | Thành viên | Vai trò | Nhiệm vụ đảm nhiệm |
 |---|---|---|
-| **Thành viên 1** | Backend Logic & Architecture | Xây dựng Service `TickerService`, quản lý `StreamController.broadcast()`, viết toán tử `Debounce` bằng `StreamTransformerBase`, giải thích cơ chế Event Loop. |
-| **Thành viên 2** | UI Design & Presentation | Xây dựng giao diện `StreamBuilder`, xử lý vòng đời `dispose()` / hủy luồng Stream, tối ưu UX tìm kiếm, soạn Slide báo cáo. |
+| Vũ Duy Dương | Backend Logic & Architecture | Xây dựng Service `TickerService`, quản lý `StreamController.broadcast()`, viết toán tử `Debounce` bằng `StreamTransformerBase`, giải thích cơ chế Event Loop. |
+| Phan Vĩnh Sơn | UI Design & Presentation | Xây dựng giao diện `StreamBuilder`, xử lý vòng đời `dispose()` / hủy luồng Stream, tối ưu UX tìm kiếm, soạn Slide báo cáo. |
 
 ---
 
