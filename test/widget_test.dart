@@ -1,9 +1,4 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Widget Test cho màn hình RealtimeTickerScreen
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,20 +6,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('RealtimeTickerScreen loads initial Future data and streams updates', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Ban đầu hiển thị trạng thái đang nạp dữ liệu qua Future
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Đang nạp dữ liệu ban đầu qua Future...'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Chờ Future initializeData (1000ms) hoàn tất
+    await tester.pump(const Duration(milliseconds: 1000));
     await tester.pump();
+    // Chờ Stream phát nhịp đầu tiên (1200ms)
+    await tester.pump(const Duration(milliseconds: 1200));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Bitcoin'), findsOneWidget);
+    expect(find.text('Ethereum'), findsOneWidget);
+
+    // Kiểm tra giải phóng tài nguyên (dispose) không để sót Timer chạy ngầm
+    await tester.pumpWidget(const SizedBox());
   });
 }

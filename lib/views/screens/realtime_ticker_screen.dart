@@ -103,23 +103,14 @@ class _RealtimeTickerScreenState extends State<RealtimeTickerScreen> {
             ),
             onPressed: () {
               setState(() {
-                if (_tickerService.isActive) {
-                  _tickerService.pause();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã tạm ngưng luồng Stream (Paused).'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                } else {
-                  _tickerService.start();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã kích hoạt lại luồng Stream thời gian thực (Resumed).'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                }
+                final isRunning = _tickerService.isActive;
+                isRunning ? _tickerService.pause() : _tickerService.start();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(isRunning ? 'Đã tạm ngưng luồng Stream.' : 'Đã kích hoạt lại luồng Stream.'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
               });
             },
           ),
