@@ -6,7 +6,7 @@
 
 ---
 
-### 1. Phân công nhiệm vụ nhóm (WBS - 2 Thành viên)
+### 1. Phân công nhiệm vụ nhóm
 | Thành viên | Vai trò | Nhiệm vụ đảm nhiệm |
 |---|---|---|
 | Vũ Duy Dương | Backend Logic & Architecture | Xây dựng Service `TickerService`, quản lý `StreamController.broadcast()`, viết toán tử `Debounce` bằng `StreamTransformerBase`, giải thích cơ chế Event Loop. |
@@ -14,7 +14,7 @@
 
 ---
 
-### 2. Cấu trúc Source Code (Tinh gọn, trực tiếp)
+### 2. Cấu trúc Source Code
 ```text
 lib/
 ├── models/
