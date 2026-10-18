@@ -34,6 +34,7 @@ class _RealtimeTickerScreenState extends State<RealtimeTickerScreen> {
 
   String _filterKeyword = ''; // Từ khóa tìm kiếm hiện tại
   bool _isInitLoading = true; // Trạng thái đang tải dữ liệu ban đầu từ Future
+  List<TickerItem> _initialItems = const []; // Dữ liệu nạp từ Future ban đầu
 
   @override
   void initState() {
@@ -59,11 +60,12 @@ class _RealtimeTickerScreenState extends State<RealtimeTickerScreen> {
   }
 
   /// Nạp dữ liệu ban đầu bằng Future:
-  /// Sau khi Future hoàn tất (1 giây), tắt vòng quay loading và bắt đầu chạy Stream định kỳ
+  /// Nhận danh sách ban đầu, bàn giao cho UI và kích hoạt Stream định kỳ
   Future<void> _setupInitialData() async {
-    await _tickerService.initializeData();
+    final initialData = await _tickerService.initializeData();
     if (mounted) {
       setState(() {
+        _initialItems = initialData;
         _isInitLoading = false;
       });
       // Kích hoạt phát giá định kỳ qua StreamController
@@ -72,7 +74,7 @@ class _RealtimeTickerScreenState extends State<RealtimeTickerScreen> {
   }
 
   /// HỦY LUỒNG VÀ GIẢI PHÓNG BỘ NHỚ KHI THOÁT MÀN HÌNH:
-  /// Đây là tiêu chí chấm điểm kỹ thuật bắt buộc của Thầy nhằm đảm bảo không rò rỉ RAM (Memory Leak)
+  /// Đảm bảo dọn dẹp các StreamController và Timer để tránh rò rỉ bộ nhớ (Memory Leak)
   @override
   void dispose() {
     // Hủy đăng ký lắng nghe sự kiện tìm kiếm
@@ -158,17 +160,22 @@ class _RealtimeTickerScreenState extends State<RealtimeTickerScreen> {
                 Expanded(
                   child: StreamBuilder<List<TickerItem>>(
                     stream: _tickerService.stream, // Lắng nghe luồng phát từ Service
+                    initialData: _initialItems, // Dữ liệu nạp từ Future ban đầu
                     builder: (context, snapshot) {
-                      // 1. Trường hợp luồng gặp lỗi
+                      // 1. Kiểm tra trạng thái đang kết nối ban đầu
+                      if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      // 2. Trường hợp luồng gặp lỗi
                       if (snapshot.hasError) {
                         return Center(child: Text('Lỗi: ${snapshot.error}'));
                       }
-                      // 2. Trường hợp chưa có dữ liệu đầu tiên
+                      // 3. Trường hợp chưa có dữ liệu
                       if (!snapshot.hasData) {
                         return const Center(child: Text('Đang đợi luồng dữ liệu...'));
                       }
 
-                      // 3. Có dữ liệu mới: Thực hiện lọc theo từ khóa debounce
+                      // 4. Có dữ liệu mới: Thực hiện lọc theo từ khóa debounce
                       final items = snapshot.data!;
                       final filtered = items.where((item) {
                         return item.name.toLowerCase().contains(_filterKeyword) ||
@@ -179,63 +186,42 @@ class _RealtimeTickerScreenState extends State<RealtimeTickerScreen> {
                         return const Center(child: Text('Không có mã nào khớp với từ khóa.'));
                       }
 
-                      // 4. Hiển thị danh sách các mã tiền số
-                      return ListView.separated(
-                        padding: const EdgeInsets.all(12),
+                      // 5. Hiển thị danh sách các mã tiền số (tối ưu hóa bằng ListTile)
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         itemCount: filtered.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final coin = filtered[index];
                           final isUp = coin.isGaining;
-                          // Màu xanh lá nếu tăng giá, màu đỏ nếu giảm giá
                           final color = isUp ? Colors.green : Colors.red;
 
                           return Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: color.withValues(alpha: 0.15),
+                                child: Text(
+                                  coin.symbol,
+                                  style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ),
+                              title: Text(coin.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(coin.symbol, style: const TextStyle(color: Colors.grey)),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  // Vòng tròn chứa ký hiệu đồng tiền
-                                  CircleAvatar(
-                                    backgroundColor: color.withValues(alpha: 0.15),
-                                    child: Text(
-                                      coin.symbol,
-                                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
-                                    ),
+                                  Text(
+                                    '\$${coin.currentPrice.toStringAsFixed(2)}',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color),
                                   ),
-                                  const SizedBox(width: 14),
-                                  // Tên và ký hiệu
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(coin.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                        Text(coin.symbol, style: const TextStyle(color: Colors.grey)),
-                                      ],
-                                    ),
-                                  ),
-                                  // Giá hiện tại và tỉ lệ phần trăm thay đổi
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      Icon(isUp ? Icons.arrow_drop_up : Icons.arrow_drop_down, color: color, size: 18),
                                       Text(
-                                        '\$${coin.currentPrice.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: color,
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          Icon(isUp ? Icons.arrow_drop_up : Icons.arrow_drop_down, color: color),
-                                          Text(
-                                            '${coin.changeRate >= 0 ? '+' : ''}${coin.changeRate.toStringAsFixed(2)}%',
-                                            style: TextStyle(color: color, fontWeight: FontWeight.w500),
-                                          ),
-                                        ],
+                                        '${coin.changeRate >= 0 ? '+' : ''}${coin.changeRate.toStringAsFixed(2)}%',
+                                        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
                                       ),
                                     ],
                                   ),

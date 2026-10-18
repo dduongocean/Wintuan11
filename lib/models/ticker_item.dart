@@ -1,7 +1,6 @@
 /// Model đại diện cho một đồng tiền số hoặc cổ phiếu trong hệ thống theo dõi giá.
 /// Sử dụng các trường dữ liệu 'final' để đảm bảo tính bất biến (Immutability).
 class TickerItem {
-  final String id; // Mã định danh duy nhất (ví dụ: '1', '2')
   final String symbol; // Ký hiệu viết tắt (ví dụ: 'BTC', 'ETH')
   final String name; // Tên đầy đủ (ví dụ: 'Bitcoin', 'Ethereum')
   final double currentPrice; // Giá thị trường ở thời điểm hiện tại
@@ -9,7 +8,6 @@ class TickerItem {
   final double changeRate; // Tỉ lệ % biến động giá
 
   const TickerItem({
-    required this.id,
     required this.symbol,
     required this.name,
     required this.currentPrice,
@@ -30,7 +28,6 @@ class TickerItem {
     final diff = newPrice - currentPrice;
     final rate = currentPrice == 0 ? 0.0 : (diff / currentPrice) * 100;
     return TickerItem(
-      id: id,
       symbol: symbol,
       name: name,
       currentPrice: newPrice,

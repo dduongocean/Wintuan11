@@ -14,30 +14,23 @@ class TickerService {
 
   // Danh mục dữ liệu gốc mô phỏng lưu trong bộ nhớ RAM
   final List<TickerItem> _items = [
-    const TickerItem(id: '1', symbol: 'BTC', name: 'Bitcoin', currentPrice: 67200.0, previousPrice: 67200.0, changeRate: 0.0),
-    const TickerItem(id: '2', symbol: 'ETH', name: 'Ethereum', currentPrice: 3450.0, previousPrice: 3450.0, changeRate: 0.0),
-    const TickerItem(id: '3', symbol: 'SOL', name: 'Solana', currentPrice: 152.0, previousPrice: 152.0, changeRate: 0.0),
-    const TickerItem(id: '4', symbol: 'ADA', name: 'Cardano', currentPrice: 0.48, previousPrice: 0.48, changeRate: 0.0),
-    const TickerItem(id: '5', symbol: 'DOT', name: 'Polkadot', currentPrice: 7.20, previousPrice: 7.20, changeRate: 0.0),
+    const TickerItem(symbol: 'BTC', name: 'Bitcoin', currentPrice: 67200.0, previousPrice: 67200.0, changeRate: 0.0),
+    const TickerItem(symbol: 'ETH', name: 'Ethereum', currentPrice: 3450.0, previousPrice: 3450.0, changeRate: 0.0),
+    const TickerItem(symbol: 'SOL', name: 'Solana', currentPrice: 152.0, previousPrice: 152.0, changeRate: 0.0),
+    const TickerItem(symbol: 'ADA', name: 'Cardano', currentPrice: 0.48, previousPrice: 0.48, changeRate: 0.0),
+    const TickerItem(symbol: 'DOT', name: 'Polkadot', currentPrice: 7.20, previousPrice: 7.20, changeRate: 0.0),
   ];
 
-  // Khởi tạo StreamController dạng Broadcast:
-  // Cho phép nhiều Widget độc lập có thể cùng lắng nghe đồng thời mà không bị lỗi.
-  StreamController<List<TickerItem>>? _controller;
+  // Khởi tạo StreamController dạng Broadcast ngay từ đầu:
+  // Đảm bảo Stream luôn sẵn sàng nhận sự kiện mà không bị null ở nhịp phát đầu tiên.
+  final StreamController<List<TickerItem>> _controller = 
+      StreamController<List<TickerItem>>.broadcast();
 
   bool _isActive = false;
   bool get isActive => _isActive; // Trạng thái luồng đang chạy hay đang tạm dừng
 
   /// Cung cấp Stream công khai để các Widget UI đăng ký lắng nghe (Subscribe)
-  Stream<List<TickerItem>> get stream {
-    if (_controller == null || _controller!.isClosed) {
-      _controller = StreamController<List<TickerItem>>.broadcast(
-        onListen: () => developer.log('Một listener mới đã kết nối vào Broadcast Stream', name: 'TickerService'),
-        onCancel: () => developer.log('Một listener đã ngắt kết nối', name: 'TickerService'),
-      );
-    }
-    return _controller!.stream;
-  }
+  Stream<List<TickerItem>> get stream => _controller.stream;
 
   /// 1. MINH HỌA FUTURE:
   /// Giả lập một tác vụ mạng bất đồng bộ nạp danh sách coin ban đầu với độ trễ 1 giây (1000ms).
@@ -53,11 +46,13 @@ class TickerService {
     _isActive = true;
 
     // Phát giá trị hiện tại ngay lập tức vào Stream Sink khi vừa bấm bắt đầu
-    _controller?.add(List.unmodifiable(_items));
+    if (!_controller.isClosed) {
+      _controller.add(List.unmodifiable(_items));
+    }
 
     _generatorTimer?.cancel();
     _generatorTimer = Timer.periodic(const Duration(milliseconds: 1200), (_) {
-      if (_controller == null || _controller!.isClosed) return;
+      if (_controller.isClosed) return;
 
       // Sinh biến động giá ngẫu nhiên trong biên độ (-1.5% đến +1.5%)
       for (int i = 0; i < _items.length; i++) {
@@ -68,7 +63,7 @@ class TickerService {
       }
 
       // Đẩy danh sách đã cập nhật giá vào Sink của Stream
-      _controller?.add(List.unmodifiable(_items));
+      _controller.add(List.unmodifiable(_items));
     });
   }
 
@@ -80,12 +75,10 @@ class TickerService {
   }
 
   /// 3. HỦY LUỒNG VÀ GIẢI PHÓNG BỘ NHỚ:
-  /// Tiêu chí bắt buộc trong đề cương: Đóng StreamController và dừng Timer
-  /// để tránh hiện tượng rò rỉ bộ nhớ (Memory Leak).
+  /// Đóng StreamController và dừng Timer để tránh rò rỉ bộ nhớ (Memory Leak).
   void dispose() {
     pause();
-    _controller?.close();
-    _controller = null;
+    _controller.close();
     developer.log('StreamController đã đóng thành công, giải phóng tài nguyên.', name: 'TickerService');
   }
 }
